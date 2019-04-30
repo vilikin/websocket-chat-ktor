@@ -3,57 +3,15 @@ package com.example
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.WebSocketSession
 
-const val SERVER_ID = "server"
-
 data class User(
     val id: String,
     var name: String,
     var socket: WebSocketSession
 )
 
-enum class CommandTypeFromUsers {
-    CHAT_MESSAGE,
-    JOIN_REQUEST
-}
-
-enum class CommandTypeToUsers {
-    CHAT_MESSAGE,
-    USER_JOINED
-}
-
-data class CommandToUsers(
-    val senderId: String,
-    val type: CommandTypeToUsers,
-    val text: String
-) {
-    fun toTextFrame(): Frame.Text {
-        val text = "$senderId $type $text"
-        return Frame.Text(text)
-    }
-}
-
-data class CommandFromUser(
-    val type: CommandTypeFromUsers,
-    val text: String
-) {
-    companion object {
-        fun parseFromString(string: String): CommandFromUser {
-            val splitBySpaces = string.split(' ')
-            assert(splitBySpaces.size >= 2)
-
-            val commandType = CommandTypeFromUsers.valueOf(splitBySpaces[0])
-            val commandText = splitBySpaces
-                .takeLast(splitBySpaces.size - 1)
-                .joinToString(" ")
-
-            return CommandFromUser(commandType, commandText)
-        }
-    }
-}
-
 class ChatRoom {
     private val users: MutableList<User> = mutableListOf()
-    private val latestCommands: MutableList<CommandToUsers> = mutableListOf()
+    private val latestBroadcasts: MutableList<Broadcast> = mutableListOf()
 
     private suspend fun join(id: String, name: String, socket: WebSocketSession) {
         val user: User = if (users.any { it.id == id }) {
@@ -68,34 +26,37 @@ class ChatRoom {
             newUser
         }
 
-        val command = CommandToUsers(
-            SERVER_ID,
-            CommandTypeToUsers.USER_JOINED,
-            "${user.id} ${user.name}"
-        )
+        val userJoinedBroadcast = UserJoinedBroadcast(user.id, user.name)
 
-        broadcast(command)
+        broadcast(userJoinedBroadcast)
     }
 
-    private suspend fun broadcast(command: CommandToUsers) {
+    private suspend fun broadcast(broadcast: Broadcast) {
+        val frame = Frame.Text(broadcast.toString())
         users.forEach {
-            it.socket.send(command.toTextFrame())
+            it.socket.send(frame)
         }
+
+        latestBroadcasts.add(broadcast)
     }
 
-    suspend fun receiveCommand(string: String, sessionId: String, socket: WebSocketSession) {
-        val command = CommandFromUser.parseFromString(string)
+    suspend fun receiveMessage(string: String, sessionId: String, socket: WebSocketSession) {
+        val message = MessageFromUser.parseFromString(string)
 
-        when (command.type) {
-            CommandTypeFromUsers.JOIN_REQUEST -> {
-                val userName = command.text
-                join(sessionId, userName, socket)
+        when (message) {
+            is JoinRequestFromUser -> {
+                join(sessionId, message.userName, socket)
             }
 
-            CommandTypeFromUsers.CHAT_MESSAGE -> {
-                val nickname = users.find { it.id == sessionId }?.name ?: return
-                val text = "<$nickname> ${command.text}"
-                broadcast(CommandToUsers(sessionId, CommandTypeToUsers.CHAT_MESSAGE, text))
+            is ChatMessageFromUser -> {
+                val userName = users.find { it.id == sessionId }?.name ?: return
+                val chatMessageBroadcast = ChatMessageBroadcast(
+                    userId = sessionId,
+                    userName = userName,
+                    message = message.message
+                )
+
+                broadcast(chatMessageBroadcast)
             }
         }
     }

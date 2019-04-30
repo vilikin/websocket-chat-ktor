@@ -25,6 +25,7 @@ sourceSets {
 repositories {
     mavenLocal()
     jcenter()
+    maven { url 'https://artifactory.cronapp.io/public-release/' }
     maven { url 'https://kotlin.bintray.com/ktor' }
 }
 
@@ -34,5 +35,8 @@ dependencies {
     compile "ch.qos.logback:logback-classic:$logback_version"
     compile "io.ktor:ktor-server-core:$ktor_version"
     compile "io.ktor:ktor-websockets:$ktor_version"
+    compile "com.google.code.gson:gson:2.8.5"
+    compile "com.google.code.gson:gson-extras:2.8.5"
+
     testCompile "io.ktor:ktor-server-tests:$ktor_version"
 }

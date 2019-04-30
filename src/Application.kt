@@ -35,7 +35,7 @@ fun Application.module() {
             val session = call.sessions.get<ChatSession>()!!
             incoming.mapNotNull { it as? Frame.Text }.consumeEach { frame ->
                 val text = frame.readText()
-                chatRoom.receiveCommand(text, session.id, this)
+                chatRoom.receiveMessage(text, session.id, this)
             }
         }
     }
