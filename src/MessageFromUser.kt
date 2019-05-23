@@ -6,7 +6,8 @@ import com.google.gson.GsonBuilder
 sealed class MessageFromUser {
     enum class Type {
         CHAT_MESSAGE,
-        JOIN_REQUEST
+        JOIN_REQUEST,
+        LEAVE_REQUEST
     }
 
     companion object {
@@ -14,6 +15,7 @@ sealed class MessageFromUser {
             val runtimeTypeAdapterFactory = RuntimeTypeAdapterFactory
                 .of(MessageFromUser::class.java, "type")
                 .registerSubtype(JoinRequestFromUser::class.java, MessageFromUser.Type.JOIN_REQUEST.name)
+                .registerSubtype(LeaveRequestFromUser::class.java, MessageFromUser.Type.LEAVE_REQUEST.name)
                 .registerSubtype(ChatMessageFromUser::class.java, MessageFromUser.Type.CHAT_MESSAGE.name)
 
             return GsonBuilder()
@@ -27,6 +29,8 @@ sealed class MessageFromUser {
 class JoinRequestFromUser(
     val userName: String
 ) : MessageFromUser()
+
+class LeaveRequestFromUser : MessageFromUser()
 
 class ChatMessageFromUser(
     val message: String

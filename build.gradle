@@ -37,6 +37,7 @@ dependencies {
     compile "io.ktor:ktor-websockets:$ktor_version"
     compile "com.google.code.gson:gson:2.8.5"
     compile "com.google.code.gson:gson-extras:2.8.5"
+    implementation "io.ktor:ktor-gson:$ktor_version"
 
     testCompile "io.ktor:ktor-server-tests:$ktor_version"
 }

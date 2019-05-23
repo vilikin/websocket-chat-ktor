@@ -9,7 +9,8 @@ sealed class Broadcast(
 ) {
     enum class Type {
         CHAT_MESSAGE,
-        USER_JOINED
+        USER_JOINED,
+        USER_LEFT
     }
 
     override fun toString(): String {
@@ -27,3 +28,8 @@ class UserJoinedBroadcast(
     val userId: String,
     val userName: String
 ): Broadcast(Broadcast.Type.USER_JOINED)
+
+class UserLeftBroadcast(
+    val userId: String,
+    val userName: String
+): Broadcast(Broadcast.Type.USER_LEFT)

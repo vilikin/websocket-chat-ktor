@@ -9,6 +9,11 @@ data class User(
     var socket: WebSocketSession
 )
 
+data class UserStripped(
+    val id: String,
+    val name: String
+)
+
 class ChatRoom {
     private val users: MutableList<User> = mutableListOf()
     private val latestBroadcasts: MutableList<Broadcast> = mutableListOf()
@@ -16,19 +21,28 @@ class ChatRoom {
     private suspend fun join(id: String, name: String, socket: WebSocketSession) {
         val user: User = if (users.any { it.id == id }) {
             val existingUser = users.find { it.id == id }!!
-            existingUser.name = name
             existingUser.socket.close(Throwable("New socket opened"))
-            existingUser.socket = socket
-            existingUser
+            broadcast(UserLeftBroadcast(id, existingUser.name))
+
+            existingUser.copy(
+                name = name,
+                socket = socket
+            )
         } else {
             val newUser = User(id, name, socket)
             users.add(newUser)
             newUser
         }
 
-        val userJoinedBroadcast = UserJoinedBroadcast(user.id, user.name)
+        broadcast(UserJoinedBroadcast(user.id, user.name))
+    }
 
-        broadcast(userJoinedBroadcast)
+    suspend fun leave(id: String) {
+        val user = users.find { it.id == id }
+        user ?: return
+
+        users.remove(user)
+        broadcast(UserLeftBroadcast(user.id, user.name))
     }
 
     private suspend fun broadcast(broadcast: Broadcast) {
@@ -58,6 +72,15 @@ class ChatRoom {
 
                 broadcast(chatMessageBroadcast)
             }
+
+            is LeaveRequestFromUser -> {
+                leave(sessionId)
+            }
         }
     }
+
+    fun getActiveUsers(): List<UserStripped> =
+            users.map {
+                UserStripped(it.id, it.name)
+            }
 }
